@@ -1,0 +1,186 @@
+{
+  "main": {
+    "id": "597f2d8ccc5ec300",
+    "type": "split",
+    "children": [
+      {
+        "id": "fbb0deaa41e5a467",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "aa51464d201c0bdf",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Writeup - DRAFT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Writeup - DRAFT"
+            }
+          },
+          {
+            "id": "d6cacc35d606fe37",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Writeup - DRAFT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Writeup - DRAFT"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "139ff87b2ae67c72",
+    "type": "split",
+    "children": [
+      {
+        "id": "c51ce77250f2cd12",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f28f509d9343f1de",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "6b39a4bebb656e73",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ead5296e0ecde365",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "49c168c21e9e010d",
+    "type": "split",
+    "children": [
+      {
+        "id": "2e265206bb3d9ef0",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "52fb5eb63241a03c",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Writeup - DRAFT.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Writeup - DRAFT"
+            }
+          },
+          {
+            "id": "4c1662436a34fe87",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Writeup - DRAFT.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Writeup - DRAFT"
+            }
+          },
+          {
+            "id": "9cad8a856a0d2ab5",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "a7d32a49af84a6e5",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Writeup - DRAFT.md"
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Writeup - DRAFT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "d6cacc35d606fe37",
+  "lastOpenFiles": [
+    "cropdiag.png",
+    "Resources.md",
+    "Writeup - DRAFT.md"
+  ]
+}
