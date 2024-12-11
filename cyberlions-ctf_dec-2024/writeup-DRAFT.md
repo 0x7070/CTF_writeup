@@ -343,24 +343,26 @@ That's a lot of information! Ignoring the details of the output, we can assume t
 
 ==make diagram==
 
-|-- Kali Attack
+```
+┌─Kali Attack
 \
 (Virtual Bridge)
 /
-|-- Docker Gateway
+└─Docker Gateway└─ ─ 
    | - 172.17.0.1
    | - 80/tcp (filtered)
    | - 21/tcp (filtered)
    |
-   |-- Docker Container A
+   ├── Docker Container A
    |     - 172.17.0.2
    |     - Apache 2.4.41
    |     - 80/tcp (open - HTTP)
    |
-   |-- Docker Container B
+   ├── Docker Container B
    |     - 172.17.0.3
    |     - vsFTPd 2.3.4
    |     - 21/tcp (open - FTP)
+```
 
 Let's save this for later, and turn back to the HTTP serer, as that is likely the simplest attack surface.
 
