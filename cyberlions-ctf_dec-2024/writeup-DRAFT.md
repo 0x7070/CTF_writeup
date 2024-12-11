@@ -342,21 +342,22 @@ Nmap done: 1 IP address (1 host up) scanned in 0.44 seconds
 That's a lot of information! Ignoring the details of the output, we can assume the following network topology, excluding the topology preceding our Kali attack machine, as that is user-dependent.
 
 ==make diagram==
-┌─Kali Attack
+
+|-- Kali Attack
 \
 (Virtual Bridge)
 /
-└─Docker Gateway└─ ─ 
+|-- Docker Gateway
    | - 172.17.0.1
    | - 80/tcp (filtered)
    | - 21/tcp (filtered)
    |
-   ├── Docker Container A
+   |-- Docker Container A
    |     - 172.17.0.2
    |     - Apache 2.4.41
    |     - 80/tcp (open - HTTP)
    |
-   ├── Docker Container B
+   |-- Docker Container B
    |     - 172.17.0.3
    |     - vsFTPd 2.3.4
    |     - 21/tcp (open - FTP)
