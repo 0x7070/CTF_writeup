@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Writeup - DRAFT.md",
+                "file": "writeup-DRAFT.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Writeup - DRAFT"
+              "title": "writeup-DRAFT"
             }
           }
         ],
@@ -179,6 +179,9 @@
   },
   "active": "d6cacc35d606fe37",
   "lastOpenFiles": [
+    "resources/untitled.drawio.png",
+    "resources/resources.md",
+    "writeup-DRAFT.md",
     "cropdiag.png",
     "Resources.md",
     "Writeup - DRAFT.md"

@@ -163,4 +163,4 @@ nmap -sc 172.17.0.1/24
 get nmap for os version
 make topographies based off of all that 
 
-![[cropdiag.png]]
+![[resources/cropdiag.png]]
