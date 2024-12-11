@@ -46,6 +46,7 @@ Docker version 26.1.5+dfsg1, build a72d7cd
 
 # Firefox version
 # Dirbuster version
+# ImageMagick version (display --version)
 
 ```
 
@@ -147,6 +148,8 @@ Option 2: ==find a method to use other ports==
 # spin up Docker containers
 ```
 
+> IMPORTANT: the order in which you run your Docker containers will dictate what services are running at which IP addresses. For this write up, it is assumed that your containers are ran in the same order as mine.
+
 You'll see container IDs if they have been ==spun up (DEFINE)==. This does not always mean a container has been successfully initialized, however -- though there may not have been any errors printed during executing, there may still be issues with configuration.
 
 Verify the containers have successfully been initialized
@@ -221,6 +224,21 @@ PORT      STATE    SERVICE
 
 Nmap done: 1 IP address (1 host up) scanned in 1.30 seconds
 ```
+OR
+```
+┌──(kali㉿kali)-[~]
+└─$ nmap 172.17.0.1                                   
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-12-11 02:31 EST
+Nmap scan report for 172.17.0.1
+Host is up (0.000010s latency).
+Not shown: 997 closed tcp ports (reset)
+PORT   STATE    SERVICE
+20/tcp filtered ftp-data
+21/tcp filtered ftp
+80/tcp filtered http
+
+Nmap done: 1 IP address (1 host up) scanned in 1.29 seconds
+```
 Nmap identified 3 filtered ports on the network, which we will not probe further, since they are already being filtered.
 
 From this point onward, we will refer to the Docker service (172.17.0.1) as the Docker Gateway.
@@ -242,7 +260,6 @@ Nmap scan report for 172.17.0.1
 Host is up.
 Nmap done: 256 IP addresses (3 hosts up) scanned in 0.23 seconds
 ```
-
 ### 2b. Probe 172.17.0.2
 
 Here, we learn of two additional nodes on the network -- (172.17.0.2) (172.17.0.3). Let's find out more about each of them. We'll begin with 172.17.0.2:
@@ -305,6 +322,7 @@ MAC Address: 02:42:AC:11:00:03 (Unknown)
 Nmap done: 1 IP address (1 host up) scanned in 0.18 seconds
 ```
 
+==specify why we only use 21 not 20 anymore==
 Again, this doesn't tell us much. Let's proceed with the same noisy scan from earlier, substituting `-p 80` for `-p 21`:
 ```
 ┌──(kali㉿kali)-[~]
@@ -364,13 +382,13 @@ That's a lot of information! Ignoring the details of the output, we can assume t
    |     - 21/tcp (open - FTP)
 ```
 
-Let's save this for later, and turn back to the HTTP serer, as that is likely the simplest attack surface.
+Let's save this for later, and turn back to the HTTP server, as that is likely the simplest surface to investigate.
 
 # 3. Assess the HTTP server
 
 Navigating to http://172.17.0.2:80/ will verify that the front-facing page is indeed titled "Login Page"
 
-> Note that the `:80` is not necessary in this case, as http traffic defaults to port 80. If the web server were to be hosted on a different port -- we'll use 9999 in this example -- we would then connect to http://172.17.0.2:999/
+> Note that the `:80` is not necessary in this case, as HTTP traffic defaults to port 80. If the web server were to be hosted on a different port -- we'll use 9999 in this example -- we would then connect to http://172.17.0.2:999/
 
 ![login page](resources/loginpage.png)
 
@@ -422,7 +440,7 @@ Let's go further.
 
 ![login icon alt png](resources/login_icon_alt.png)
 
-Just a simple png. We could look at metadata and binary information, but at this point, there's no reason to pursue an image. 
+Just a simple png. We could look at metadata and binary information, but at this point, there's no reason to pursue an image -- we can come back to it at a later point if we deem necessary.
 
 
 `http://172.17.0.2:80/resources/bcred.txt`
@@ -437,16 +455,15 @@ Let's analyze these hashes.
 
 In the first column (delimited by the colon `:`), we can assume these are usernames. In the second column, thanks to the hash identifier `$2y$`, we have what looks to be password hashes.
 
-By doing some research, we can positively identify these hashes as an iteration of the bcrypt hashing algorithm. ==more information can be found here==. time to crack (https://specopssoft.com/blog/hashing-algorithm-cracking-bcrypt-passwords/) Furthermore, we can conclude that cracking these hashes is unrealistic, seen in this time-to-crack table. 
+By doing some research, we can positively identify these hashes as an iteration of the bcrypt hashing algorithm. ==more information can be found here==. time to crack (https://specopssoft.com/blog/hashing-algorithm-cracking-bcrypt-passwords/) Furthermore, given the complexity of a possible password, we can conclude that cracking these hashes is unrealistic, as seen in this time-to-crack table. Again, we can return to this later if need be. 
+
+For now, we will proceed to the other node on this network.
 
 ### 3c-a. Brute force paths with Dirbuster
 
-Though viewing source code got us to the paths not initially visible to the user, it can become tedious and increasingly difficult with large code-bases. However, it is open-source, and is difficult to detect.
+Though viewing source code got us to the paths not initially visible to the user, it can become tedious and increasingly difficult with large code-bases. However, the source-code is openly available, therefore making any malicious intent difficult to detect.
 
-Alternatively, as we are in a closed environment without any concerns to firewalls or threat detection, we can take the more aggressive approach: Dirbuster. We will proceed as if we have just reached the login page and have not yet discovered any internal paths.
-
-==explain dirbuster and how it uses errors to identify==
-==explain both modes - brude and dict==
+Alternatively, as we are in a closed environment without any concerns to firewalls or threat detection, we can take a more aggressive approach: Dirbuster. *We will proceed as if we have just reached the login page and have not yet discovered any internal paths.*
 
 For this approach, we'll opt for the GUI, as it is more user friendly, and provides us with some nice functionality.
 
@@ -480,11 +497,273 @@ Set the following configuration:
 |> Start
 ```
 
+![brute force attack with Dirbuster](resources/brute_dirbuster.png)
+
 The result of this type of brute force will vary based on your connection, hardware, and available resources. 
 
-Looking at the bottom left, we given a time-of-completion estimate. For this specific attack we have configured, it will take an unbelievably long amount of time -- we have not made any configurations that would result in a particularly 'efficient' brute force attack. Fortunately, however, the paths within the web server aren't obfuscated, and are found relatively quickly. 
+Looking at the bottom left, we given a time-of-completion estimate. For this specific attack we have configured, it will take an unbelievably long amount of time -- we have not made any configurations that would result in a particularly 'efficient' brute force attack. Fortunately, however, the paths within the web server aren't obfuscated, and are found relatively quickly. Looking at either the `List View` or the `Tree View`, we can stop the attack once we have identified `bcred.txt` successfully.
+
+![brute force dirbuster tree view result](resources/brute_dirbuster_result.png)
 
 Still, let's explore another potential configuration.  
 
+The attack we previously performed -- a pure brute force attack -- generates combinations using iterations of characters. 
+
+> For example: Let's lay out the following scenario.
+> We have obtained access to a ==jailbroken== iPhone which, dissimilar to it's intended functionality, does not lock itself when too many incorrect pin combinations have been entered. 
+> Because of this, we are able to freely guess the pin combination as many times as we would like until we are granted access. We know the pin is 6 digits, allowing us to try each combination iteratively until we have guessed correctly. 
+> In practice, this would look something like:
+> 000000, 000001, 000010, 000100, 001000, 010000, 100000, etc...
+> Sure, this will eventually find the correct combination, but it is terribly inefficient -- if the key combination is 999999, we will have to iterate through 1000000 combinations before we would have generated the correct pin.
+
+Regarding Dirbuster, we are doing the same attack but with paths as keys, and larger, more complex combinations involving digits, symbols, and letters. Again, this is extremely inefficient. Instead, we can specify a **list of commonly used path names** to iterate through. By doing this, not only are we decreasing the amount of iterations that must be taken, but also the resources which the computer must allocate to Dirbuster. On the other hand, however, if the path name is one which is not listed within our **dictionary**, it is unlikely to be found unless we are calculating additional permutations.
+
+This attack is known as a Dictionary attack, and will be helpful in minimizing the time required to locate paths within the web server. 
+
+# 3c-b. Dictionary attack with Dirbuster
+
+We will need a wordlist to use. For this specific instance, I recommend a medium sized wordlist -- we want to avoid over-fitting our attack and utilizing an unnecessary amount of resources, while providing enough combinations for Dirbuster to iterate through so that we still have a good chance of finding what we are looking for. We can always change our wordlists later.
+
+##### Making the wordlist accessible to Dirbuster
+
+Commonly used wordlists are provided within Kali -- we will use those packaged with Dirbuster for this attack.
+
+``` bash
+┌──(kali㉿kali)-[~]
+└─$ cp /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt .
+```
+
+Quit Dirbuster and launch a new instance. Then, set the following configurations:
+
+```
+- Target URL (eg http://example.com:80/)
+> Enter "http://172.17.0.2:80/"
+
+- Select scanning type:
+> Select "List based brute force"
+
+- File with list of dirs/files
+> Navigate to the path which you copied `dictionary-list-2.3-medium.txt` to
+```
+
+As for "Number Of Threads", you can experiment with larger values as you carry out the attack. If you begin the attack and notice no issues, you may try to increase the thread count. At 10 threads (the same thread count we performed the brute force attack with), take notice to the monumental decrease in processing-time required to complete the attack. 
+
+I have checked "Go Faster" and set mine to `500` for time-sake.
+
+![dictionary attack with dirbuster template](resources/dict_dirbuster_blank.png)
+
+When ready, begin the attack with `|> Start`.
+
+Once you feel satisfied with the results, you can navigate to `Results - List View:` or `Results - Tree View` to see what Dirbuster has found. 
+
+Using this wordlist, we have uncovered some more information.
+
+==crop the top==
+
+![tree view dirbuster](resources/tree_dirbuster.png)
+
+The response codes indicate what default permissions are designated to the corresponding path.
+
+| response code | description                                                                    |
+| ------------- | ------------------------------------------------------------------------------ |
+| 200           | OK - we can successfully access this path                                      |
+| 302           | Redirection - we are being redirected away from this path and cannot access it |
+| 403           | Forbidden - we cannot access the contents of this path                         |
+
+As the response codes indicate, there is nothing we can access here that we haven't already accessed through our source code enumeration, so we will move on to the other node on this network. 
+
+Quit Dirbuster, and proceed to the next step.
+# 4. Assess the vsFTPd server 
+
+### 4a. Understanding the nmap output
+
+Before we plan an attack, let's first revisit the nmap output from our earlier scan of `172.17.0.3`. 
+
+``` 
+┌──(kali㉿kali)-[~]
+└─$ nmap -sC -sV -p 21 172.17.0.2
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-12-11 02:54 EST
+Nmap scan report for 172.17.0.2
+Host is up (0.000030s latency).
+
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 2.3.4
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to 172.17.0.1
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 1
+|      vsFTPd 2.3.4 - secure, fast, stable
+|_End of status
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| drwxrwxr--    4 1001     1001         4096 Dec 04 15:46 beary
+| drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 franklin
+| -rwxrwxr-x    1 0        0          134881 Dec 04 02:41 key.png
+|_-rwxrwxr-x    1 0        0          689793 Dec 04 02:41 lock.png
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+Service Info: OS: Unix
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 0.51 seconds
+```
+
+I will break this down into sections:
+
+First, we will focus on the initial port detection report.
+```
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 2.3.4
+```
+This tells us a few things. One of which, and arguably most important, is the version of the running service on this node. With the service version, we are able to research known exploits, vulnerabilities, structure, or any information that might prove useful otherwise. That will come in a later step. 
+
+Next, the FTP server status.
+```
+| FTP server status:
+|      Connected to 172.17.0.1
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 1
+|      vsFTPd 2.3.4 - secure, fast, stable
+|_End of status
+```
+This output is specifically the result of the `-sC` flag. Here, we are given the following information:
+- `Logged in as ftp`
+	- This indicates the presence of a FTP server that has enabled **anonymous login**. This is a helpful feature for public file servers that do not require log in credentials to access publicly-facing data.
+		- It is also important to note that there may still be users and data placed behind a wall of credentials on the same anonymous login enabled server.
+- `Control connection is plain text / Data connections will be plain text`
+	- There is no service-level encryption preventing us from easily accessing what data is available through anonymous login.
+
+Next, the connection report through anonymous login.
+```
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| drwxrwxr--    4 1001     1001         4096 Dec 04 15:46 beary
+| drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 franklin
+| -rwxrwxr-x    1 0        0          134881 Dec 04 02:41 key.png
+|_-rwxrwxr-x    1 0        0          689793 Dec 04 02:41 lock.png
+```
+Here, from left to right, we see directories (the `d` preceding the permission listing), files (the `-` preceding the permission listing), and their permission listing (`-drwxrwxr--`), data ownership indications (`1001 1001`), last date of modification (`Dec 04 15:46`), and the data itself (`beary`).
+
+Finally, the OS detection of the service.
+```
+Service Info: OS: Unix
+```
+We learn with this line that the server is Unix-based, and support Unix-like commands. Once in the server, we can type `?` to view a list of possible commands.
+
+Now that we have a grasp of the service we are targeting, let's connect to it. 
+
+### 4b. Connect to the vsFTPd server
+
+Anonymous-enabled FTP servers have two common login possibilities:
+- Possibility 1
+	- username predefined
+		- `ftp`, `anon`, `anonymous`, etc.
+	- password non-essential
+		- When the password of an anonymous-enabled FTP server is non-essential, any password will be accepted, with the occasional requirement that it is not empty.
+- Possibility 2
+	- username predefined
+		- `ftp`, `anon`, `anonymous`, etc.
+	- password predefined
+		- Not uncommon, but also not typical of a truly anonymous-enabled FTP environment. 
+		- When the password is predefined, the user must provide the password.
+			- Often, this password matches the username.
+			- If the server is intentionally anonymous, the credentials can likely be found in a publicly-accessible location.
 
 
+Luckily for us, we do not have to do any password searching. To connect, use the following credentials:
+
+```
+user: ftp
+pass: {anything}
+```
+
+``` bash
+┌──(kali㉿kali)-[~]
+└─$ ftp 172.17.0.2           
+Connected to 172.17.0.2.
+220 (vsFTPd 2.3.4)
+Name (172.17.0.2:kali): ftp
+331 Please specify the password.
+Password: 
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> 
+```
+
+Now that we are here, let's do some looking around. 
+
+A simple `ls` shows us the following: 
+```
+ftp> ls
+229 Entering Extended Passive Mode (|||10214|).
+150 Here comes the directory listing.
+drwxrwxr--    4 1001     1001         4096 Dec 04 15:46 beary
+drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 franklin
+-rwxrwxr-x    1 0        0          134881 Dec 04 02:41 key.png
+-rwxrwxr-x    1 0        0          689793 Dec 04 02:41 lock.png
+226 Directory send OK.
+```
+
+Again, we see permissions, which indicate that the only anonymously accessible files are `key.png` and `lock.png`, as the `other` permission set ==explain that== is e[`x`]ecutable (`r-x`). This means that anyone is able to perform commands on the file.
+
+Use `get` to download the files from the server.
+```
+ftp> get key.png
+local: key.png remote: key.png
+229 Entering Extended Passive Mode (|||55389|).
+150 Opening BINARY mode data connection for key.png (134881 bytes).
+100% |***********************************************************************************************************************************************************************************************|   131 KiB  702.90 MiB/s    00:00 ETA
+226 Transfer complete.
+134881 bytes received in 00:00 (364.39 MiB/s)
+
+ftp> get lock.png
+local: lock.png remote: lock.png
+229 Entering Extended Passive Mode (|||45154|).
+150 Opening BINARY mode data connection for lock.png (689793 bytes).
+100% |***********************************************************************************************************************************************************************************************|   673 KiB  974.57 MiB/s    00:00 ETA
+226 Transfer complete.
+689793 bytes received in 00:00 (890.17 MiB/s)
+```
+
+Viewing the permission sets for the directories `beary` and `franklin`, we can see that the `other` set is not executable. Therefore, we cannot access them anonymously. 
+
+Additionally, we cannot `cd ..` because, as executing `pwd` will tell us, this is the highest directory we can access. As an anonymous user, we are confined within this directory.
+
+```
+ftp> pwd
+Remote directory: /
+```
+
+Let's see what the images have for us. Use `exit` to leave the vsFTPd server.
+
+### 4c. Accessing the `.png`'s from the vsFTPd server
+
+Using `display` -- a CLI tool provided by the `ImageMagick` package, we can view these images. Alternatively, you can use `open {path}` or `mimeopen {path}`, which will allow you to choose a image viewer to view the image with.
+
+``` bash
+┌──(kali㉿kali)-[~]
+└─$ display key.png
+```
+
+![key.png](resources/key.png)
+
+```
+┌──(kali㉿kali)-[~]
+└─$ display lock.png
+```
+
+![lock.png](resources/lock.png)
+
+There is nothing unusual about these images upfront, so let's dig a little deeper.
+
+Explain ==metadata== and ==exifdata==
