@@ -369,7 +369,7 @@ Navigating to http://172.17.0.2:80/ will verify that the front-facing page is in
 
 > Note that the `:80` is not necessary in this case, as http traffic defaults to port 80. If the web server were to be hosted on a different port -- we'll use 9999 in this example -- we would then connect to http://172.17.0.2:999/
 
-![[loginpage.png]]
+![login page](resources/loginpage.png)
 
 We can try a few things here.
 
@@ -408,16 +408,16 @@ Here, we are interested in the following bit of HTML:
 This indicates the existence of both the `resources` directory and the `login_icon_alt.png` png within it. Nothing else seems out of the ordinary, so let's see what is accessible at the path we just discovered.
 
 `http://172.17.0.2:80/resources`
-![[resources_dir.png]]
+![resources directory png](resources/resources_dir.png)
 
 Let's go further.
 
 `http://172.17.0.2:80/resources/login_icon_alt.png`
-![[login_icon_alt.png]]
+![login icon alt png](resources/login_icon_alt.png)
 Just a simple png. We could look at metadata and binary information, but at this point, there's no reason to pursue an image. 
 
 `http://172.17.0.2:80/resources/bcred.txt`
-![[bcred.png]]
+![bcred png](resources/bcred.png)
 Interesting! It looks like we have a pair of hashed credentials.
 
 ### 3b-b. Hash analysis
@@ -450,9 +450,9 @@ For this approach, we'll opt for the GUI, as it is more user friendly, and provi
 
 ##### Kali search menu
 
-![[menu.png]]
+![kali menu](resources/menu.png)
 
-![[menu_dirbuster.png]]
+![kali menu dirbuster](resources/menu_dirbuster.png)
 
 ==add arrow icons==
 
