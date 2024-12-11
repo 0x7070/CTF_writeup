@@ -164,7 +164,7 @@ We're looking for the "up ..." in the "STATUS" column. Anything else will give u
 > Here are a few possible network topologies for our initial environment:
 > Here is my current network topology with respect to what we *would* know at this point:
 
-![sample network topology][./resources/cropdiag.png]]
+![sample network topology][./resources/cropdiag.png]
 
 **Ubuntu host, Kali bridged with host, unknown Docker services bridged with Kali**
 Ubuntu host
