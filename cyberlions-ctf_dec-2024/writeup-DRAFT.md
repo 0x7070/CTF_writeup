@@ -407,17 +407,25 @@ Here, we are interested in the following bit of HTML:
 
 This indicates the existence of both the `resources` directory and the `login_icon_alt.png` png within it. Nothing else seems out of the ordinary, so let's see what is accessible at the path we just discovered.
 
+
 `http://172.17.0.2:80/resources`
+
 ![resources directory png](resources/resources_dir.png)
 
 Let's go further.
 
+
 `http://172.17.0.2:80/resources/login_icon_alt.png`
+
 ![login icon alt png](resources/login_icon_alt.png)
+
 Just a simple png. We could look at metadata and binary information, but at this point, there's no reason to pursue an image. 
 
+
 `http://172.17.0.2:80/resources/bcred.txt`
+
 ![bcred png](resources/bcred.png)
+
 Interesting! It looks like we have a pair of hashed credentials.
 
 ### 3b-b. Hash analysis
