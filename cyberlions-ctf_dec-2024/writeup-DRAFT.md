@@ -47,6 +47,10 @@ Docker version 26.1.5+dfsg1, build a72d7cd
 # Firefox version
 # Dirbuster version
 # ImageMagick version (display --version)
+# Exiftool (exiftool -ver)
+# hexdump
+# binwalk
+# hash-identifier
 
 ```
 
@@ -132,15 +136,15 @@ If there are open ports that **are not** a essential to the current session, ter
 sudo kill -9 {pid},{pid},...
 ```
 
-If the ports **are** essential to the current session, follow option 2. 
+If open ports **are** essential to the current session, follow option 2. 
 
 Option 1:
 ```
 # spin up Docker containers with default configuration
 ┌──(kali㉿kali)-[~]
-└─$ sudo docker run -d -p 20:20 -p 21:21 professorprofessional/cyberlions-vsftpd234:v1.0
-┌──(kali㉿kali)-[~]
 └─$ sudo docker run -d -p 80:80 professorprofessional/cyberlions-apache2:v1.0
+┌──(kali㉿kali)-[~]
+└─$ sudo docker run -d -p 20:20 -p 21:21 professorprofessional/cyberlions-vsftpd234:v1.0
 ```
 
 Option 2: ==find a method to use other ports==
@@ -459,7 +463,7 @@ By doing some research, we can positively identify these hashes as an iteration 
 
 For now, we will proceed to the other node on this network.
 
-### 3c-a. Brute force paths with Dirbuster
+### 3c-a. Brute force paths with `dirbuster`
 
 Though viewing source code got us to the paths not initially visible to the user, it can become tedious and increasingly difficult with large code-bases. However, the source-code is openly available, therefore making any malicious intent difficult to detect.
 
@@ -520,7 +524,7 @@ Regarding Dirbuster, we are doing the same attack but with paths as keys, and la
 
 This attack is known as a Dictionary attack, and will be helpful in minimizing the time required to locate paths within the web server. 
 
-# 3c-b. Dictionary attack with Dirbuster
+# 3c-b. Dictionary attack with `dirbuster`
 
 We will need a wordlist to use. For this specific instance, I recommend a medium sized wordlist -- we want to avoid over-fitting our attack and utilizing an unnecessary amount of resources, while providing enough combinations for Dirbuster to iterate through so that we still have a good chance of finding what we are looking for. We can always change our wordlists later.
 
@@ -573,17 +577,19 @@ The response codes indicate what default permissions are designated to the corre
 As the response codes indicate, there is nothing we can access here that we haven't already accessed through our source code enumeration, so we will move on to the other node on this network. 
 
 Quit Dirbuster, and proceed to the next step.
+
+---
 # 4. Assess the vsFTPd server 
 
-### 4a. Understanding the nmap output
+### 4a. Understanding the `nmap` output
 
 Before we plan an attack, let's first revisit the nmap output from our earlier scan of `172.17.0.3`. 
 
 ``` 
 ┌──(kali㉿kali)-[~]
-└─$ nmap -sC -sV -p 21 172.17.0.2
+└─$ nmap -sC -sV -p 21 172.17.0.3
 Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-12-11 02:54 EST
-Nmap scan report for 172.17.0.2
+Nmap scan report for 172.17.0.3
 Host is up (0.000030s latency).
 
 PORT   STATE SERVICE VERSION
@@ -746,7 +752,7 @@ Remote directory: /
 
 Let's see what the images have for us. Use `exit` to leave the vsFTPd server.
 
-### 4c. Accessing the `.png`'s from the vsFTPd server
+### 4c-a. Accessing the `.png`'s from the vsFTPd server
 
 Using `display` -- a CLI tool provided by the `ImageMagick` package, we can view these images. Alternatively, you can use `open {path}` or `mimeopen {path}`, which will allow you to choose a image viewer to view the image with.
 
@@ -766,4 +772,324 @@ Using `display` -- a CLI tool provided by the `ImageMagick` package, we can view
 
 There is nothing unusual about these images upfront, so let's dig a little deeper.
 
-Explain ==metadata== and ==exifdata==
+Data holds two sets of information -- the data itself, and **metadata**.
+
+The data is the binary inside making up the content within the file. The metadata is the information about the data. 
+
+Furthermore, metadata itself has two forms -- metadata, and exifdata. 
+
+Metadata, as mentioned before, is the information about the data -- think, filename, filesize, filetype, etc. Similarly, exifdata is a more specific form of metadata pertaining to image files -- camera type, picture dimensions, geolocation at which the picture was taken, etc. 
+
+Both metadata and exifdata can be artificially modified as a (loose) form of steganography -- so, let's explore the exifdata of our images.
+
+### 4c-b. Analyzing EXIF data with `exiftool`
+
+Kali supports `exiftool`, which is a tool used to extract the exifdata from image files.
+
+Let's focus on `key.png` first.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ exiftool key.png                                                                                                          
+ExifTool Version Number         : 13.00
+File Name                       : key.png
+Directory                       : .
+File Size                       : 135 kB
+File Modification Date/Time     : 2024:12:03 21:41:17-05:00
+File Access Date/Time           : 2024:12:11 19:50:41-05:00
+File Inode Change Date/Time     : 2024:12:11 19:50:41-05:00
+File Permissions                : -rw-rw-r--
+File Type                       : PNG
+File Type Extension             : png
+MIME Type                       : image/png
+Image Width                     : 626
+Image Height                    : 501
+Bit Depth                       : 8
+Color Type                      : RGB with Alpha
+Compression                     : Deflate/Inflate
+Filter                          : Adaptive
+Interlace                       : Noninterlaced
+Description                     : Trash comes on Friday's in some neighborhoods... I sure would hate to have to WALK my BIN back inside on a Friday.
+Image Size                      : 626x501
+Megapixels                      : 0.314
+```
+
+Here, we see many different categories. Of these, `Description` seems to stand out. `"Trash comes on Friday's in some neighborhoods... I sure would hate to have to WALK my BIN back inside on a Friday"`. Hmm... I wonder what this could mean! 
+
+Let's check out `lock.png` and see if we can uncover any other information.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ exiftool lock.png 
+ExifTool Version Number         : 13.00
+File Name                       : lock.png
+Directory                       : .
+File Size                       : 690 kB
+File Modification Date/Time     : 2024:12:03 21:41:17-05:00
+File Access Date/Time           : 2024:12:11 19:50:43-05:00
+File Inode Change Date/Time     : 2024:12:11 19:50:43-05:00
+File Permissions                : -rw-rw-r--
+File Type                       : PNG
+File Type Extension             : png
+MIME Type                       : image/png
+Image Width                     : 536
+Image Height                    : 764
+Bit Depth                       : 8
+Color Type                      : RGB with Alpha
+Compression                     : Deflate/Inflate
+Filter                          : Adaptive
+Interlace                       : Noninterlaced
+Warning                         : [minor] Trailer data after PNG IEND chunk
+Image Size                      : 536x764
+Megapixels                      : 0.410
+```
+
+No description tag here. Instead, we have discovered a `Warning`, stating `"[minor] Trailer data after PNG IEND chunk"`. Without going into extensive detail, here is a short explanation:
+
+Like data and metadata, in an extremely oversimplified way, the binary making up a file can be viewed in two separate chunks: a header, and a body. 
+
+The header, in the case of the PNGs we are working with, is an 8-bit hexadecimal string, which the computer uses to identify the type of a file and how it should be handled. For PNGs, it is `89 50 4E 47 0D 0A 1A 0A`. You can learn more information about file signatures [here](https://en.wikipedia.org/wiki/List_of_file_signatures)
+
+The body, on the other hand, is the data itself. 
+
+The computer knows where the data from the original PNG ends, and in turn knows when something is there that shouldn't be.  
+
+### 4c-c. Analyzing hexdumps with `hexdump`
+
+To view the hex data of our PNG, we can use `hexdump`.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hexdump lock.png   
+0000000 5089 474e 0a0d 0a1a 0000 0d00 4849 5244
+0000010 0000 1802 0000 fc02 0608 0000 a200 cc51
+0000020 0084 2000 4900 4144 7854 ec5e 79bd a4b0
+0000030 75e7 f7de 7f76 dcbd f66d 1019 b100 2010
+...
+```
+
+That's a lot ... we can get around this by piping the output to a file and reading the first few lines.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hexdump lock.png > lockdump.txt | head     
+0000000 5089 474e 0a0d 0a1a 0000 0d00 4849 5244
+0000010 0000 1802 0000 fc02 0608 0000 a200 cc51
+0000020 0084 2000 4900 4144 7854 ec5e 79bd a4b0
+0000030 75e7 f7de 7f76 dcbd f66d 1019 b100 2010
+0000040 8248 2914 2452 d225 6d12 2a59 b229 2f2d
+0000050 2cb1 8a27 94e5 396c 4aae ca55 4aae 2a55
+0000060 fc95 5495 4afe 4e45 b25c b22a 2f23 b2e5
+0000070 712b 2964 2cb6 b2d9 48bc c976 a916 248d
+0000080 9048 0914 006e 1009 3004 9deb bb99 f774
+0000090 9dd7 efdf f79c dbeb 0433 4049 4904 a60c
+```
+
+That's better. Still, that's not what we're looking for.
+
+`hexdump -C {path}` will give us **canonical output**, which presents the hexadecimal in a format similar to how we see the file signature `89 50 4E 47 0D 0A 1A 0A`
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hexdump -C lock.png > lockdump.txt && head lockdump.txt
+00000000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
+00000010  00 00 02 18 00 00 02 fc  08 06 00 00 00 a2 51 cc  |..............Q.|
+00000020  84 00 00 20 00 49 44 41  54 78 5e ec bd 79 b0 a4  |... .IDATx^..y..|
+00000030  e7 75 de f7 76 7f bd dc  6d f6 19 10 00 b1 10 20  |.u..v...m...... |
+00000040  48 82 14 29 52 24 25 d2  12 6d 59 2a 29 b2 2d 2f  |H..)R$%..mY*).-/|
+00000050  b1 2c 27 8a e5 94 6c 39  ae 4a 55 ca ae 4a 55 2a  |.,'...l9.JU..JU*|
+00000060  95 fc 95 54 fe 4a 45 4e  5c b2 2a b2 23 2f e5 b2  |...T.JEN\.*.#/..|
+00000070  2b 71 64 29 b6 2c d9 b2  bc 48 76 c9 16 a9 8d 24  |+qd).,...Hv....$|
+00000080  48 90 14 09 6e 00 09 10  04 30 eb 9d 99 bb 74 f7  |H...n....0....t.|
+00000090  d7 9d df ef 9c f7 eb db  33 04 49 40 04 49 0c a6  |........3.I@.I..|
+```
+
+Looking at the first line of output, we see our 8-bit hexadecimal string, `89 50 4e 47 0d 0a 1a 0a`. So, what is the importance of the warning? That lies in the body.
+
+`[minor] Trailer data after PNG IEND chunk` indicates an excess of data, but where is it?
+
+==PNG file structure== https://www.w3.org/TR/PNG-Structure.html
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hexdump -C key.png > keydump.txt | grep "END"   
+00020ed0  02 86 07 2d 53 00 00 00  00 49 45 4e 44 ae 42 60  |...-S....IEND.B`|
+```
+
+By parsing through the output of our hexdump, we can see that there is a single instance of "`END`" in the hexdump of `keydump.txt`, which is to be expected as there was no warning of trailing data in its exifdata. 
+
+```
+┌──(kali㉿kali)-[~]
+└─$ grep "END" lockdump.txt 
+0005c740  45 4e 44 ae 42 60 82 89  50 4e 47 0d 0a 1a 0a 00  |END.B`..PNG.....|
+000a8670  13 63 91 c8 c1 00 00 00  00 49 45 4e 44 ae 42 60  |.c.......IEND.B`|
+```
+
+However, for `lockdump.txt`, we see something different -- there are more than one instances of "`END`", justifying the warning of trailing data.
+
+Similarly, we can do the same for "`HDR`", which indicates the beginning of the body of a `PNG`'s data.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ grep "HDR" lockdump.txt
+00000000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
+0005c750  00 00 0d 49 48 44 52 00  00 02 3d 00 00 02 fc 08  |...IHDR...=.....|
+```
+
+The presence of two `IHDR`'s and two `IEND`'s suggest the existence of another `PNG`, but how do we access it?
+
+### 4c-d. Extracting embedded files using `binwalk`
+
+==explain further==
+Binwalk is a tool which rebuilds data using strings of, in this case, logically related hexadecimal (i.e hexadecimal within `IHDR` and `IEND`).
+
+==explain command=
+
+```
+┌──(kali㉿kali)-[~]
+└─$ binwalk --dd=.* lock.png 
+
+DECIMAL       HEXADECIMAL     DESCRIPTION
+--------------------------------------------------------------------------------
+0             0x0             PNG image, 536 x 764, 8-bit/color RGBA, non-interlaced
+41            0x29            Zlib compressed data, compressed
+378695        0x5C747         PNG image, 573 x 764, 8-bit/color RGB, non-interlaced
+379633        0x5CAF1         Zlib compressed data, default compression
+```
+
+Exactly as we concluded through the hexdumps, there was another PNG embedded within `lock.png`. 
+
+In the `HEXADECIMAL` column, we will focus on two things: `0x0` and `0x5C747`. `0x0` is, and will always be the original file we are attempting to extract from. `0x5C747`, in this case, is the hexadecimal representation of our image. 
+
+Use `display` to view the extracted image found in `_lock.png.extracted`, which was created by `binwalk`.
+
+### 4c-e. Accessing the extracted `PNG`
+
+```
+┌──(kali㉿kali)-[~]
+└─$ display _lock.png.extracted/5C747
+```
+
+![lock extracted](resources/lock_extracted.png)
+
+Awesome! It seems as if we've found login credentials which, judging by the password `FTPranklin`, are used to access the FTP server.
+
+Let's do that.
+
+# 5a. Gaining access to the FTP server
+
+Login to the FTP server using the following credentials:
+```
+username: franklin
+password: FTPranklin
+```
+
+```┌──(kali㉿kali)-[~]
+└─$ ftp 172.17.0.3
+Connected to 172.17.0.3.
+220 (vsFTPd 2.3.4)
+Name (172.17.0.3:kali): franklin
+331 Please specify the password.
+Password: 
+'230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+```
+
+Great! Let's look around.
+
+```
+ftp> ls
+229 Entering Extended Passive Mode (|||10694|).
+150 Here comes the directory listing.
+drwxrwxr--    5 1002     1002         4096 Dec 04 15:46 home
+226 Directory send OK.
+ftp> cd home
+250 Directory successfully changed.
+ftp> ls
+229 Entering Extended Passive Mode (|||23614|).
+150 Here comes the directory listing.
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 desktop
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 documents
+226 Directory send OK.
+ftp> cd desktop
+250 Directory successfully changed.
+ftp> ls
+229 Entering Extended Passive Mode (|||8195|).
+150 Here comes the directory listing.
+-rwxrwxr--    1 1002     1002          355 Dec 04 15:46 notes.txt
+-rwxrwxr--    1 1002     1002          307 Dec 04 15:46 todo.txt
+226 Directory send OK.
+ftp> cd ../documents
+250 Directory successfully changed.
+ftp> ls
+229 Entering Extended Passive Mode (|||23473|).
+150 Here comes the directory listing.
+-rwxrwxr--    1 1002     1002          400 Dec 04 15:46 draft.txt
+-rwxrwxr--    1 1002     1002          695 Dec 04 15:46 journal.txt
+-rwxrwxr--    1 1002     1002          232 Dec 04 15:46 shopping_list.txt
+ftp>
+```
+
+Unfortunately, there is nothing useful within this directory.
+
+Except, what if it's hidden?
+
+Using `-la` with `ls`, we can view files and directories hidden by beginning their name with a period `.`.
+
+```
+ftp> ls -la
+229 Entering Extended Passive Mode (|||40262|).
+150 Here comes the directory listing.
+drwxrwxr--    5 1002     1002         4096 Dec 04 15:46 .
+drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 ..
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 .hidden
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 desktop
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 documents
+226 Directory send OK.
+ftp> cd .hidden
+250 Directory successfully changed.
+ftp> ls -la
+229 Entering Extended Passive Mode (|||15243|).
+150 Here comes the directory listing.
+drwxrwxr--    2 1002     1002         4096 Dec 04 15:46 .
+drwxrwxr--    5 1002     1002         4096 Dec 04 15:46 ..
+-rwxrwxr--    1 1002     1002          293 Dec 04 15:46 .quiet
+226 Directory send OK.
+```
+
+In the `home` directory, we have found the hidden directory `.hidden`, containing the hidden file `.quiet`.
+
+Let's analyze that.
+
+### 5b. Analyzing `.quiet`
+
+```
+ftp> get .quiet
+local: .quiet remote: .quiet
+229 Entering Extended Passive Mode (|||34716|).
+150 Opening BINARY mode data connection for .quiet (293 bytes).
+100% |******************************************************|   293        1.08 MiB/s    00:00 ETA
+226 Transfer complete.
+293 bytes received in 00:00 (645.89 KiB/s)
+```
+
+After getting it from the server, we can view its contents.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ cat .quiet                         
+youtube:franky:73e77203ad07cd155aa0b9e8e45100a2049006b6
+gmail:franklin01@gmail.com:9bf0525826f868a09a715836f2e7c62a6a18e614
+svssl:franklin:2597fa0ba3c99e391c928236e4c6801ccae8087c
+steam:franklyHIM:b1ccd9b1cf8c20a5d028d6ea74ff2455ccb17e52
+ftp:franklin:2597fa0ba3c99e391c928236e4c6801ccae8087c
+```
+
+It looks like `.quiet` contained password hashes. As the password hashes seem relatively simple, using `hash-identifier`, we can try to identify these hashes.
+
+```
+s
+```
+
+make new hashes md5
