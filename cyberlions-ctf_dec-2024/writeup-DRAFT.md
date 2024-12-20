@@ -1,17 +1,21 @@
 
 ---
 
-> IMPORTANT:
-> 	This write up is incomplete. All of the steps and a majority of the explanations are there, however more work remains to be done both on the Docker containers and this writeup itself.
-> 	
-> 	Any questions, comments, or other inquiries can be directed to any of the following contacts:
-> 		- Email: raykhelson.ielon@gmail.com
-> 		- Direct Message me via Discord: `thesillygoose.`
-> 		- Send a message in the Cyber Lions Discord: https://discord.gg/csxvHzpbNy
-> 		- Issue/Pull request via Github: https://github.com/0x7070/CTF_writeup
-> 		  
-> 	If at any point you are stuck in the CTF, please do not hesitate to reach out. I will be happy to help step you through the challenge.
+# /!\ IMPORTANT /!\
 
+***This write up is incomplete.***
+
+All of the steps and a majority of the explanations are there, however more work remains to be done both on the Docker containers and this writeup itself.
+ 	
+Questions, comments, and all other inquiries can be directed to any of the following contacts:
+- Email: raykhelson.ielon@gmail.com
+- Direct Message me via Discord: `thesillygoose.`
+- Send a message in the Cyber Lions Discord: https://discord.gg/csxvHzpbNy
+- Issue/Pull request via Github: https://github.com/0x7070/CTF_writeup
+ 		  
+*If at any point you are stuck in the CTF, please do not hesitate to reach out. I will be happy to help step you through the challenge.*
+
+---
 
 # Version Info
 ``` bash
@@ -92,6 +96,8 @@ v6.2.6
 $ apt show exploitdb
 Version: 20241116-0kali1
 ```
+
+---
 
 # 1. Initialize and configure Docker containers
 
@@ -216,6 +222,7 @@ Ubuntu host
 > You may have a similar network topology, but ultimately, the way you proceed will be determined by the next step.
 
 ---
+
 # 2. Identify network topology
 
 ``` bash
@@ -423,6 +430,8 @@ That's a lot of information! Ignoring the details of the output, we can assume t
 
 Let's save this for later, and turn back to the HTTP server, as that is likely the simplest surface to investigate.
 
+---
+
 # 3. Assess the HTTP server
 
 Navigating to http://172.17.0.2:80/ will verify that the front-facing page is indeed titled "Login Page"
@@ -610,6 +619,7 @@ As the response codes indicate, there is nothing we can access here that we have
 Quit Dirbuster, and proceed to the next step.
 
 ---
+
 # 4. Probe the vsFTPd server 
 
 ### 4a. Understanding the `nmap` output
@@ -1010,7 +1020,11 @@ Awesome! It seems as if we've found login credentials which, judging by the pass
 
 Let's do that.
 
-# 5a. Gaining access to the FTP server
+---
+
+# 5. FTP server
+
+## 5a. Gaining access to the FTP server
 
 Login to the FTP server using the following credentials:
 ```
@@ -1098,7 +1112,7 @@ In the `home` directory, we have found the hidden directory `.hidden`, containin
 
 Let's analyze that.
 
-### 5b. Analyzing `.quiet`
+## 5b. Analyzing `.quiet`
 
 ```
 ftp> get .quiet
@@ -1196,6 +1210,8 @@ Least Possible Hashs:
 
 Awesome! Our hash is recognized as an MD5 hash -- luckily, it seems unsalted. This will be easy!
 
+---
+
 # 6. Password cracking using Hashcat
 
 ## 6a-a. Getting the `rockyou` wordlist
@@ -1212,6 +1228,7 @@ Thankfully, Kali saves us the trouble of importing this wordlist ourselves.
 ```
 
 >-d -> decompress
+
 >-k -> keep original archive
 
 ```
@@ -1386,6 +1403,8 @@ There are many ways to view cracked credentials with hashcat. We've chosen to sp
 ```
 
 Great. Let's try this on the login portal.
+
+---
 
 # 7. Accessing SVSSL
 
@@ -1702,6 +1721,9 @@ Abort session 1? [y/N]
 [*] 172.17.0.3 - Command shell session 1 closed.  Reason: User exit
 > msf6 exploit(unix/ftp/vsftpd_234_backdoor) > exit
 ```
+
+---
+
 # 9. Cracking the credentials
 
 We can follow the same workflow as we did when we were cracking franklins credentials previously.
@@ -1838,6 +1860,8 @@ Stopped: Fri Dec 20 01:47:44 2024
 ```
 
 Again, this shouldn't take very long.
+
+---
 
 # 10. Using the cracked credentials to gain access to the SVSSL portal
 
